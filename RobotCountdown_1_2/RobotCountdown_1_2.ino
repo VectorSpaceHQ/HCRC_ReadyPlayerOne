@@ -65,7 +65,7 @@ RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false, 64);
 
 */
 
-const int StartButtonPin = 7; //Sets the constant to the pin number on the Arduino
+const int StartButtonPin = 7; //Sets the constant  to the pin number on the Arduino
 int StartButtonState = 0; //Sets the button state variable
 
 /*
@@ -89,6 +89,8 @@ int PlayerTwoReady = 0; //Sets false to readiness of player
 
 const int ResetButtonPin = 4; //Sets the constant to the pin number on the Arduino
 int ResetButtonState = 0; //Sets the button state variable
+
+bool startTimer = false;
 
 /*
    The following sets the variables to define the length of the countdown matchTimer.
@@ -121,10 +123,10 @@ void setup() {
      +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   */
 
-  pinMode(StartButtonPin, INPUT);
-  pinMode(PlayerOneButtonPin, INPUT);
-  pinMode(PlayerTwoButtonPin, INPUT);
-  pinMode(ResetButtonPin, INPUT);
+  pinMode(StartButtonPin, INPUT_PULLUP);
+  pinMode(PlayerOneButtonPin, INPUT_PULLUP);
+  pinMode(PlayerTwoButtonPin, INPUT_PULLUP);
+  pinMode(ResetButtonPin, INPUT_PULLUP);
 
 
   /* Upon startup or reset, the following fills the screen with green and then with black as
@@ -200,7 +202,7 @@ void resetClock() {
   matchTimer.SetTimer(0, minute, second);
 
   //Call the matchStart function to show that the match is about to begin.
-  matchStart(); //Green with "Match Start" printed on the screen. Countdown clock begins.
+  //matchStart(); //Green with "Match Start" printed on the screen. Countdown clock begins.
 
   //Get the display ready for the countdown clock to be displayed
   matrix.fillScreen(matrix.Color333(0, 0, 0));//black fill
@@ -273,6 +275,9 @@ void countdownClock() { //Prints Countdown in Red and the Time in Green
   matrix.setTextColor(matrix.Color333(0, 7, 0)); //bright green
   matrix.print(matchTimer.ShowMinutes());
   matrix.print(":");
+  if (matchTimer.ShowSeconds() <= 9){
+    matrix.print("0");
+  }
   matrix.print(matchTimer.ShowSeconds());
   delay(1000);
 
@@ -387,18 +392,30 @@ void loop() {
      unless both players have pressed their ready button.
   */
 
-  if (ResetButtonState == HIGH) {
+  if (ResetButtonState == LOW) {
     resetClock();
   } else {
     if (PlayerOneReady != 1) { //Check to see if player is already flagged as ready.
-      if (PlayerOneButtonState == HIGH) { //Check if the button has been pressed.
+      if (PlayerOneButtonState == LOW) { //Check if the button has been pressed.
         PlayerOneReady = 1; //Flag player as ready.
+        matrix.fillScreen(matrix.Color333(0, 7, 0));
+        matrix.println("ONE");
+        matrix.setCursor(3, 17);
+        matrix.println("READY");
+        matrix.fillScreen(matrix.Color333(0, 0, 0)); //Fills the LED with black
+        //delay(500);
         //Write "Ready Player One" to LED (Write this if there is time.)
       }
     }
     if (PlayerTwoReady != 1) { //Check to see if player is already flagged as ready.
-      if (PlayerTwoButtonState == HIGH) { //Check if the button has been pressed.
+      if (PlayerTwoButtonState == LOW) { //Check if the button has been pressed.
         PlayerTwoReady = 1; //Flag player as ready.
+        matrix.fillScreen(matrix.Color333(7, 7, 0));
+        matrix.println("TWO");
+        matrix.setCursor(3, 17);
+        matrix.println("READY");
+        matrix.fillScreen(matrix.Color333(0, 0, 0)); //Fills the LED with black
+        //delay(500);
         //Write "Ready Player Two" to LED (Write this if there is time.)
       }
     }
@@ -408,7 +425,11 @@ void loop() {
     */
     if (PlayerOneReady == 1 && PlayerTwoReady == 1) { //Check to see that both players are flagged as ready.
       StartButtonState = digitalRead(StartButtonPin); //Get the status of the Start button pin.
-      if (StartButtonState == HIGH) { //Check to see if the Start button has been pressed.
+     
+      if (StartButtonState == LOW) { //Check to see if the Start button has been pressed.
+        startTimer = true;
+      }
+      if (startTimer == true){
         matchTimer.Timer(); //Run the timer.
         //**
         if (matchTimer.TimeHasChanged() ) { // this prevents the time from being constantly shown.
@@ -428,10 +449,15 @@ void loop() {
           if (matchTimer.TimeCheck(0, 0, 0)) { //When time has expired
             matchOver(); //Flashes that the match is over
             matchTimer.StopTimer();
+            startTimer = false;
             matrix.fillScreen(matrix.Color333(0, 0, 0)); //Fills the LED with black
+            resetClock();
           }
         }
       } //This is the end of the checking to see if time has changed.
     } //This is the end of getting the Start Button State.
+    else if (ResetButtonState == LOW) {
+        resetClock();
+        }
   } //This is the end of checking the player flags.
 } //This is the end of the else after checking the Reset button.
